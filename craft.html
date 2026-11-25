@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/game-guard.js?v=2"></script>
+<script src="/play-gate.js?v=3"></script>
+<script>(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Vox Craft — Voxprints games</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
+<script src="/error-log.js?v=6"></script>
+<script src="/lb-hold.js?v=1" defer></script>
+<script src="/signin-link.js?v=10"></script>
+<script src="/update-check.js" defer></script>
+<script src="/game-ui.js?v=4" defer></script>
+<script src="/site-menu.js?v=9" defer></script>
+<script src="/friends.js?v=8" defer></script>
+<style>
+  html{ touch-action: manipulation; }
+  body{ -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  input{ -webkit-user-select: text; user-select: text; }
+  .ico{ width:1em; height:1em; vertical-align:-0.15em; flex-shrink:0; }
+  :root{
+    --canvas: #ffffff; --canvas-inset: #f6f8fa; --border: #d1d9e0; --border-muted: #d8dee4;
+    --fg: #1f2328; --fg-muted: #59636e; --accent: #0969da; --btn-hover-bg: #f3f4f6; --ok: #1a7f37;
+    --dot: rgba(31,35,40,.09);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --canvas: #0d1117; --canvas-inset: #161b22; --border: #30363d; --border-muted: #21262d;
+      --fg: #e6edf3; --fg-muted: #8b949e; --accent: #4493f8; --btn-hover-bg: #21262d; --ok: #3fb950;
+      --dot: rgba(255,255,255,.07);
+    }
+  }
+  :root[data-theme="dark"]{
+    --canvas: #0d1117; --canvas-inset: #161b22; --border: #30363d; --border-muted: #21262d;
+    --fg: #e6edf3; --fg-muted: #8b949e; --accent: #4493f8; --btn-hover-bg: #21262d; --ok: #3fb950;
+    --dot: rgba(255,255,255,.07);
+  }
+  *{ box-sizing: border-box; }
+  html, body{ height: 100%; }
+  body{ margin: 0; background: var(--canvas); color: var(--fg); overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif; display: flex; flex-direction: column; }
+  .topbar{ display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border-muted); flex-shrink: 0; }
+  .topbar a{ color: var(--fg); text-decoration: none; font-weight: 600; font-size: 14px; }
+  .topbar .title{ margin-right: auto; font-weight: 800; letter-spacing: -.01em; }
+  .tbtn{ font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 8px; cursor: pointer; background: var(--canvas-inset); color: var(--fg); border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 6px; }
+  .tbtn:hover{ background: var(--btn-hover-bg); }
+  .count{ font-size: 13px; color: var(--fg-muted); }
+
+  .game{ flex: 1; display: flex; min-height: 0; }
+  .board{ flex: 1; position: relative; overflow: hidden; touch-action: none;
+    background-image: radial-gradient(var(--dot) 1.2px, transparent 1.2px); background-size: 22px 22px; }
+  .hint{ position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); color: var(--fg-muted); font-size: 14px; text-align: center; pointer-events: none; padding: 0 20px; }
+  .side{ width: 320px; border-left: 1px solid var(--border-muted); display: flex; flex-direction: column; background: var(--canvas); min-height: 0; }
+  .side-head{ padding: 10px; display: flex; gap: 8px; border-bottom: 1px solid var(--border-muted); }
+  .side-head input{ flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--canvas-inset); color: var(--fg); }
+  .side-head select{ font: inherit; font-size: 13px; border-radius: 8px; border: 1px solid var(--border); background: var(--canvas-inset); color: var(--fg); padding: 0 6px; }
+  .list{ flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 7px; touch-action: pan-y; }
+
+  .item{ display: inline-flex; align-items: center; padding: 7px 12px; border-radius: 9px; font-size: 14.5px; font-weight: 600; line-height: 1.2;
+    background: var(--canvas); color: var(--fg); border: 1px solid var(--border); cursor: grab; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .item:hover{ border-color: var(--accent); }
+  .item.newest{ border-color: var(--accent); box-shadow: 0 0 0 2px rgba(68,147,248,.2); }
+  .board .item{ position: absolute; box-shadow: 0 2px 8px rgba(0,0,0,.12); touch-action: none; }
+  .board .item.drag{ cursor: grabbing; z-index: 50; box-shadow: 0 10px 24px rgba(0,0,0,.25); transform: scale(1.05); }
+  .board .item.target{ border-color: var(--accent); background: rgba(68,147,248,.14); }
+  .board .item.busy{ opacity: .7; animation: busy .8s ease-in-out infinite; }
+  .board .item.pop{ animation: pop .35s cubic-bezier(.34,1.56,.64,1); }
+  .board .item.nope{ animation: nope .35s ease; }
+  @keyframes busy{ 50%{ transform: scale(.95); } }
+  @keyframes pop{ from{ transform: scale(.4); opacity: 0; } to{ transform: scale(1); opacity: 1; } }
+  @keyframes nope{ 25%{ transform: translateX(-5px); } 75%{ transform: translateX(5px); } }
+  .toast{ position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(20px); opacity: 0; transition: .25s; pointer-events: none;
+    background: var(--canvas-inset); border: 1px solid var(--border); color: var(--fg); padding: 9px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; z-index: 100; white-space: nowrap; }
+  .toast.on{ opacity: 1; transform: translateX(-50%); }
+  .toast.first{ border-color: var(--ok); color: var(--ok); }
+  .wait{ position: absolute; left: 10px; top: 8px; font: 600 12px ui-monospace, 'SF Mono', monospace; color: var(--fg-muted); opacity: .45; pointer-events: none; z-index: 5; }
+  .trash{ position: absolute; left: 12px; bottom: 12px; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: var(--canvas-inset); border: 1px solid var(--border); color: var(--fg-muted); font-size: 18px; opacity: 0; transition: .2s; pointer-events: none; }
+  .trash.on{ opacity: 1; }
+  .trash.over{ color: #f85149; border-color: #f85149; transform: scale(1.12); }
+  /* discovery effects: a ring and sparks for anything new to you, plus a banner for a first discovery on the whole site */
+  .burst{ position: absolute; width: 0; height: 0; pointer-events: none; z-index: 40; }
+  .burst .ring{ position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; border-radius: 50%; border: 3px solid var(--accent); animation: ring .7s ease-out forwards; }
+  .burst.first .ring{ border-color: #e3b341; }
+  .burst i{ position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: spark .8s cubic-bezier(.2,.7,.3,1) forwards; }
+  .burst.first i{ background: #e3b341; width: 9px; height: 9px; }
+  @keyframes ring{ to{ transform: scale(9); opacity: 0; border-width: 1px; } }
+  @keyframes spark{ to{ transform: translate(var(--x), var(--y)) scale(.3); opacity: 0; } }
+  .board .item.new-glow{ animation: pop .45s cubic-bezier(.34,1.56,.64,1), glow 1.6s ease-out .2s; }
+  .board .item.first-glow{ animation: pop .55s cubic-bezier(.34,1.56,.64,1), glowGold 2.4s ease-out .2s; border-color: #e3b341; }
+  @keyframes glow{ 0%{ box-shadow: 0 0 0 0 rgba(68,147,248,.7); } 100%{ box-shadow: 0 0 0 18px rgba(68,147,248,0); } }
+  @keyframes glowGold{ 0%, 40%{ box-shadow: 0 0 0 0 rgba(227,179,65,.8), 0 0 24px rgba(227,179,65,.6); } 100%{ box-shadow: 0 0 0 26px rgba(227,179,65,0); } }
+  .list .item.just{ animation: listIn .6s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes listIn{ from{ transform: scale(.3); opacity: 0; } }
+  .banner{ position: fixed; left: 50%; top: 30%; transform: translate(-50%,-50%) scale(.6); opacity: 0; z-index: 120; pointer-events: none; text-align: center;
+    background: var(--canvas); border: 2px solid #e3b341; border-radius: 16px; padding: 16px 26px; box-shadow: 0 18px 50px rgba(0,0,0,.35); transition: .35s cubic-bezier(.34,1.56,.64,1); }
+  .banner.on{ opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  .banner small{ display: block; font-size: 11.5px; font-weight: 800; letter-spacing: .14em; color: #e3b341; }
+  .banner b{ display: block; font-size: 26px; margin-top: 4px; }
+  .lb{ position: fixed; inset: 0; z-index: 130; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .lb[hidden]{ display: none; }
+  .lb-card{ width: 100%; max-width: 380px; max-height: 80vh; overflow-y: auto; background: var(--canvas); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+  .lb-head{ display: flex; align-items: center; justify-content: space-between; font-size: 16px; }
+  .lb-head .tbtn{ padding: 5px 7px; }
+  .lb-sub{ font-size: 13px; color: var(--fg-muted); margin: 4px 0 10px; }
+  .lb-list{ list-style: none; margin: 0; padding: 0; }
+  .lb-list li{ display: flex; gap: 10px; align-items: center; padding: 8px 4px; border-top: 1px solid var(--border-muted); font-size: 14px; }
+  .lb-list li.me{ color: var(--accent); font-weight: 700; }
+  .lb-list .r{ width: 26px; color: var(--fg-muted); font-weight: 700; }
+  .lb-list .n{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-list .v{ font-weight: 700; font-variant-numeric: tabular-nums; }
+  @media (max-width: 760px){
+    .game{ flex-direction: column; }
+    .side{ width: 100%; height: 42%; border-left: 0; border-top: 1px solid var(--border-muted); }
+    .topbar .lg{ display: none; }
+    .topbar{ gap: 6px; padding: 8px 10px; }
+    .topbar .tbtn{ padding: 6px 10px; }
+  }
+  @media (prefers-reduced-motion: reduce){ .board .item{ animation: none !important; } }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a href="/apps.html">&larr; Games</a>
+    <span class="title">Vox Craft</span>
+    <span class="count" id="count"></span>
+    <button type="button" class="tbtn" id="lb-btn" title="Most first discoveries"><svg class="ico" aria-hidden="true"><use href="/icons.svg#crown"/></svg><span class="lg">Leaderboard</span></button>
+    <button type="button" class="tbtn" id="clear" title="Clear the board"><svg class="ico" aria-hidden="true"><use href="/icons.svg#trash-2"/></svg><span class="lg">Clear</span></button>
+  </div>
+  <div class="game">
+    <div class="board" id="board">
+      <div class="hint" id="hint">Drag items here, then drop one onto another to combine them.</div>
+      <div class="wait" id="wait" hidden title="Waiting for the AI"></div>
+      <div class="trash" id="trash" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="/icons.svg#trash-2"/></svg></div>
+    </div>
+    <div class="side">
+      <div class="side-head">
+        <input type="search" id="search" placeholder="Search" aria-label="Search items" autocomplete="off">
+        <select id="sort" aria-label="Sort"><option value="time">Newest</option><option value="az">A–Z</option></select>
+      </div>
+      <div class="list" id="list"></div>
+    </div>
+  </div>
+  <div class="lb" id="lb" hidden>
+    <div class="lb-card" role="dialog" aria-labelledby="lb-title">
+      <div class="lb-head"><b id="lb-title">First discoveries</b><button type="button" class="tbtn" id="lb-close" aria-label="Close"><svg class="ico" aria-hidden="true"><use href="/icons.svg#x"/></svg></button></div>
+      <div class="lb-sub" id="lb-sub"></div>
+      <ol class="lb-list" id="lb-list"></ol>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <div class="banner" id="banner" role="status"><small>FIRST DISCOVERY</small><b id="banner-name"></b></div>
+
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  import { startLive } from '/live.js?v=4';
+  const sb = createClient('https://paycasfatsakidsriwqt.supabase.co', 'sb_publishable_Yk3l_-tXm4qtaRnrfw54pw_Awel9tCv');
+  const $ = id => document.getElementById(id);
+  const board = $('board'), list = $('list'), trash = $('trash');
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ---- what you've found (kept in this browser) ----
+  const BASE = ['Water', 'Fire', 'Wind', 'Earth'];
+  const KEY = 'vxcraft-items';
+  let items = [];
+  try { items = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) {}
+  if (!Array.isArray(items) || !items.length) items = BASE.slice();
+  BASE.forEach(b => { if (!items.includes(b)) items.unshift(b); });
+  let newest = null;
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (e) {} };
+  function renderList(){
+    const q = $('search').value.trim().toLowerCase();
+    let shown = items.filter(n => !q || n.toLowerCase().includes(q));
+    shown = $('sort').value === 'az' ? shown.slice().sort((a, b) => a.localeCompare(b)) : shown.slice().reverse();
+    list.innerHTML = shown.map(n => `<div class="item${n === newest ? ' newest' : ''}" data-name="${esc(n)}">${esc(n)}</div>`).join('');
+    $('count').textContent = items.length + ' items';
+  }
+  $('search').addEventListener('input', renderList);
+  $('sort').addEventListener('change', renderList);
+
+  let toastT = null;
+  function toast(t, first){
+    const el = $('toast'); el.textContent = t; el.className = 'toast on' + (first ? ' first' : '');
+    clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2200);
+  }
+
+  // combinations you've already made, kept here too: the same pair always gives the same thing, straight away
+  const RKEY = 'vxcraft-recipes';
+  let recipes = {};
+  try { recipes = JSON.parse(localStorage.getItem(RKEY) || '{}') || {}; } catch (e) {}
+  const pairKey = (a, b) => [a.toLowerCase(), b.toLowerCase()].sort().join('+');
+  // every pair anyone has made, loaded up front (then new ones every 20 s), so a known pair combines instantly
+  let knownAt = null;
+  async function loadKnown(){
+    try {
+      const { data, error } = await sb.rpc('craft_known', { p_since: knownAt });
+      if (error || !data) return;
+      knownAt = data.at;
+      // the founder can reset everyone's progress: a new epoch clears what this browser has found
+      if (data.epoch){
+        let mine = null; try { mine = localStorage.getItem('vxcraft-epoch'); } catch (e) {}
+        if (mine !== String(data.epoch)){
+          if (mine !== null || items.length > BASE.length){
+            items = BASE.slice(); recipes = {}; newest = null; save(); renderList();
+            board.querySelectorAll('.item').forEach(el => el.remove()); hint();
+          }
+          try { localStorage.setItem('vxcraft-epoch', String(data.epoch)); localStorage.setItem(RKEY, '{}'); } catch (e) {}
+        }
+      }
+      data.r.forEach(([a, b, res]) => { recipes[pairKey(a, b)] = res; });
+      try { localStorage.setItem(RKEY, JSON.stringify(recipes)); } catch (e) {}
+    } catch (e) {}
+  }
+  loadKnown(); setInterval(loadKnown, 20000);
+  // the real Infinite Craft answers for pairs of things you have (fetched again for each new item), so those show instantly too
+  const ic = {};
+  async function loadIc(newName){
+    try {
+      const { data } = await sb.rpc('craft_ic_pairs', { p_have: items, p_new: newName || null });
+      (data || []).forEach(([a, b, res]) => { ic[pairKey(a, b)] = res; });
+    } catch (e) {}
+  }
+  loadIc();
+
+  // ---- discovery effects ----
+  function burst(x, y, first){
+    const b = document.createElement('div'); b.className = 'burst' + (first ? ' first' : '');
+    b.style.left = x + 'px'; b.style.top = y + 'px';
+    const n = first ? 18 : 10, r = first ? 90 : 60;
+    let html = '<span class="ring"></span>';
+    for (let i = 0; i < n; i++){ const t = (i / n) * Math.PI * 2, d = r * (0.6 + Math.random() * 0.5);
+      html += `<i style="--x:${Math.round(Math.cos(t) * d)}px;--y:${Math.round(Math.sin(t) * d)}px;animation-delay:${(Math.random() * 0.08).toFixed(2)}s"></i>`; }
+    b.innerHTML = html; board.appendChild(b);
+    setTimeout(() => b.remove(), 1000);
+  }
+  let bannerT = null;
+  function banner(name){
+    $('banner-name').textContent = name; $('banner').classList.add('on');
+    clearTimeout(bannerT); bannerT = setTimeout(() => $('banner').classList.remove('on'), 2200);
+  }
+
+  // ---- the board ----
+  function hint(){ $('hint').hidden = !!board.querySelector('.item'); }
+  function place(name, x, y, cls){
+    const el = document.createElement('div');
+    el.className = 'item' + (cls ? ' ' + cls : ''); el.textContent = name; el.dataset.name = name;
+    board.appendChild(el);
+    const r = board.getBoundingClientRect();
+    el.style.left = Math.max(4, Math.min(r.width - el.offsetWidth - 4, x - el.offsetWidth / 2)) + 'px';
+    el.style.top = Math.max(4, Math.min(r.height - el.offsetHeight - 4, y - el.offsetHeight / 2)) + 'px';
+    hint();
+    return el;
+  }
+  const centre = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+  function overlapping(el){
+    const a = el.getBoundingClientRect();
+    let best = null, bestD = 1e9;
+    board.querySelectorAll('.item:not(.busy)').forEach(o => {
+      if (o === el) return;
+      const b = o.getBoundingClientRect();
+      if (a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom) return;
+      const d = Math.hypot((a.left + a.right - b.left - b.right) / 2, (a.top + a.bottom - b.top - b.bottom) / 2);
+      if (d < bestD){ bestD = d; best = o; }
+    });
+    return best;
+  }
+
+  async function combine(a, b){
+    const pk = pairKey(a.dataset.name, b.dataset.name);
+    if (recipes[pk]) return show(a, b, { result: recipes[pk], first: false });
+    if (ic[pk]){   // a real recipe: show it now, the server saves it (and says if it's a site first) in the background
+      const el = show(a, b, { result: ic[pk], first: false }), an = a.dataset.name, bn = b.dataset.name;
+      recipes[pk] = ic[pk];
+      sb.functions.invoke('craft', { body: { a: an, b: bn } }).then(({ data }) => {
+        if (!data || !data.result) return;
+        recipes[pk] = data.result; try { localStorage.setItem(RKEY, JSON.stringify(recipes)); } catch (e) {}
+        if (data.first && el && el.isConnected){
+          const c = centre(el), br = board.getBoundingClientRect();
+          el.classList.add('first-glow'); burst(c.x - br.left, c.y - br.top, true); banner(data.result);
+        }
+      }, () => {});
+      return el;
+    }
+    a.classList.add('busy'); b.classList.add('busy');
+    let res = null, err = null;
+    try {
+      const { data, error } = await sb.functions.invoke('craft', { body: { a: a.dataset.name, b: b.dataset.name } });
+      if (error){ try { err = (await error.context.json()).error; } catch (e) { err = 'Try again.'; } }
+      else res = data;
+    } catch (e){ err = 'Try again.'; }
+    if (!err && res && res.wait) return queueWait(a, b, res.wait);   // busy right now: stays in the queue, tries again by itself
+    a.classList.remove('busy'); b.classList.remove('busy');
+    if (err || !res || !res.result){   // only a connection problem or the hourly limit gets here
+      [a, b].forEach(el => { el.classList.remove('nope'); void el.offsetWidth; el.classList.add('nope'); });
+      toast(err || 'Try again.');
+      return;
+    }
+    recipes[pk] = res.result;
+    try { localStorage.setItem(RKEY, JSON.stringify(recipes)); } catch (e) {}
+    return show(a, b, res);
+  }
+  // ---- waiting queue: Groq said wait, so the pair keeps pulsing, a faint countdown shows top left, then it goes ----
+  const queue = [];
+  let waitUntil = 0, waitTimer = null;
+  function queueWait(a, b, secs){
+    a.classList.add('busy'); b.classList.add('busy');
+    if (!queue.some(q => q.a === a && q.b === b)) queue.push({ a, b });
+    waitUntil = Math.max(waitUntil, Date.now() + secs * 1000);
+    if (!waitTimer) waitTimer = setInterval(tick, 250);
+    tick();
+  }
+  function tick(){
+    const left = Math.ceil((waitUntil - Date.now()) / 1000);
+    const w = $('wait');
+    if (left > 0){ w.hidden = false; w.textContent = left >= 60 ? Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') : left + 's'; return; }
+    w.hidden = true; clearInterval(waitTimer); waitTimer = null;
+    const go = queue.splice(0);
+    (async () => { for (const q of go){ if (q.a.isConnected && q.b.isConnected) await combine(q.a, q.b); } })();   // in order, one at a time
+  }
+
+  function show(a, b, res){
+    const ca = centre(a), cb = centre(b), br = board.getBoundingClientRect();
+    const x = (ca.x + cb.x) / 2 - br.left, y = (ca.y + cb.y) / 2 - br.top;
+    a.remove(); b.remove();
+    const isNew = !items.includes(res.result);
+    const el = place(res.result, x, y, res.first ? 'first-glow' : isNew ? 'new-glow' : 'pop');
+    if (isNew){
+      items.push(res.result); newest = res.result; save(); renderList(); loadIc(res.result);
+      const chip = list.querySelector(`.item[data-name="${CSS.escape(res.result)}"]`); if (chip) chip.classList.add('just');
+      burst(x, y, res.first);
+      if (res.first) banner(res.result); else toast('New: ' + res.result);
+    }
+    return el;
+  }
+
+  // ---- dragging (mouse and touch): from the list makes a copy, on the board moves it ----
+  let drag = null;
+  function start(e, el, fromList){
+    if (e.button > 0) return;
+    e.preventDefault();
+    const br = board.getBoundingClientRect();
+    if (fromList){
+      el = place(el.dataset.name, e.clientX - br.left, e.clientY - br.top);
+      // on phones the list sits under the board: start the copy where the finger is, even outside the board
+      el.style.left = (e.clientX - br.left - el.offsetWidth / 2) + 'px';
+      el.style.top = (e.clientY - br.top - el.offsetHeight / 2) + 'px';
+    }
+    const r = el.getBoundingClientRect();
+    drag = { el, dx: e.clientX - r.left, dy: e.clientY - r.top, sx: e.clientX, sy: e.clientY, t: Date.now(), moved: false, fromList, id: e.pointerId };
+    el.classList.add('drag');
+    trash.classList.add('on');
+  }
+  list.addEventListener('pointerdown', e => {
+    const it = e.target.closest('.item'); if (!it) return;
+    // phones: a quick tap places the item; a drag that starts by going sideways or up pulls it out; a vertical swipe scrolls the list
+    if (e.pointerType === 'touch'){
+      const sx = e.clientX, sy = e.clientY;
+      const move = ev => {
+        const dx = ev.clientX - sx, dy = ev.clientY - sy;
+        if (Math.hypot(dx, dy) < 8) return;
+        cleanup();
+        if (dy < -Math.abs(dx) * 0.6 || Math.abs(dx) > Math.abs(dy)) start(ev, it, true);
+      };
+      const up = ev => { cleanup(); if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 8) tapPlace(it.dataset.name); };
+      const cleanup = () => { list.removeEventListener('pointermove', move); list.removeEventListener('pointerup', up); list.removeEventListener('pointercancel', cleanup); };
+      list.addEventListener('pointermove', move); list.addEventListener('pointerup', up); list.addEventListener('pointercancel', cleanup);
+      return;
+    }
+    start(e, it, true);
+  });
+  function tapPlace(name){
+    const br = board.getBoundingClientRect(), n = board.querySelectorAll('.item').length;
+    const el = place(name, br.width * (0.35 + Math.random() * 0.3), br.height * (0.35 + Math.random() * 0.3) + (n % 4) * 6, 'pop');
+    return el;
+  }
+  board.addEventListener('pointerdown', e => { const it = e.target.closest('.item'); if (it && !it.classList.contains('busy')) start(e, it, false); });
+  board.addEventListener('dblclick', e => {
+    const it = e.target.closest('.item'); if (!it) return;
+    const c = centre(it), br = board.getBoundingClientRect();
+    place(it.dataset.name, c.x - br.left + 24, c.y - br.top + 24, 'pop');
+  });
+  window.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 10) drag.moved = true;
+    const br = board.getBoundingClientRect();
+    drag.el.style.left = (e.clientX - br.left - drag.dx) + 'px';
+    drag.el.style.top = (e.clientY - br.top - drag.dy) + 'px';
+    board.querySelectorAll('.target').forEach(t => t.classList.remove('target'));
+    const o = overlapping(drag.el); if (o) o.classList.add('target');
+    const tr = trash.getBoundingClientRect();
+    trash.classList.toggle('over', e.clientX >= tr.left - 10 && e.clientX <= tr.right + 10 && e.clientY >= tr.top - 10 && e.clientY <= tr.bottom + 10);
+  });
+  function end(e){
+    if (!drag || e.pointerId !== drag.id) return;
+    const { el, fromList, sx, sy, t } = drag; drag = null;
+    // a click (or a quick tap with a little wobble) on the list: drop it near the middle; a real drag places it where it lands
+    const click = Math.hypot(e.clientX - sx, e.clientY - sy) < 10 || (Date.now() - t < 250 && Math.hypot(e.clientX - sx, e.clientY - sy) < 30);
+    el.classList.remove('drag');
+    board.querySelectorAll('.target').forEach(t => t.classList.remove('target'));
+    const overTrash = trash.classList.contains('over');
+    trash.classList.remove('on', 'over');
+    if (fromList && click){ el.remove(); tapPlace(el.dataset.name); return; }
+    const br = board.getBoundingClientRect(), c = centre(el);
+    const outside = c.x < br.left || c.x > br.right || c.y < br.top || c.y > br.bottom;
+    if (overTrash || outside){ el.remove(); hint(); return; }   // dropped back on the list (or the bin): gone
+    el.style.left = Math.max(0, Math.min(br.width - el.offsetWidth, el.offsetLeft)) + 'px';
+    el.style.top = Math.max(0, Math.min(br.height - el.offsetHeight, el.offsetTop)) + 'px';
+    const o = overlapping(el);
+    if (o) combine(el, o);
+  }
+  window.addEventListener('pointerup', end);
+  window.addEventListener('pointercancel', end);
+  $('clear').addEventListener('click', () => { board.querySelectorAll('.item').forEach(el => el.remove()); hint(); });
+
+  renderList(); hint();
+
+  // ---- who's playing now (the "N playing" button and the games page strip) ----
+  let user = null;
+  sb.auth.getSession().then(({ data }) => { user = data.session ? data.session.user : null; });
+  sb.auth.onAuthStateChange((_e, s) => { user = s ? s.user : null; });
+  // ---- leaderboard: who found the most things first on the whole site ----
+  async function openLb(){
+    $('lb').hidden = false; $('lb-sub').textContent = 'Loading…'; $('lb-list').innerHTML = '';
+    const { data, error } = await sb.rpc('craft_leaderboard', { p_limit: 20 });
+    if (error || !data){ $('lb-sub').textContent = 'Couldn\'t load.'; return; }
+    $('lb-sub').textContent = data.total + ' items found so far' + (user ? ' · you found ' + data.mine + ' first' : ' · sign in to get credit');
+    $('lb-list').innerHTML = data.top.length ? data.top.map(r =>
+      `<li class="${r.me ? 'me' : ''}"${r.uid ? ` data-lb-uid="${r.uid}" data-lb-game="craft" data-lb-name="${esc(r.name || 'Player')}"` : ''}><span class="r">${r.rank}</span><span class="n">${esc(r.name || 'Player')}</span><span class="v">${r.value}</span></li>`).join('')
+      : '<li>No one yet.</li>';
+  }
+  $('lb-btn').addEventListener('click', openLb);
+  $('lb-close').addEventListener('click', () => { $('lb').hidden = true; });
+  $('lb').addEventListener('click', e => { if (e.target === $('lb')) $('lb').hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') $('lb').hidden = true; });
+
+  startLive({ sb: () => sb, user: () => user, game: 'craft', statsGame: 'dune', title: 'Vox Craft', score: () => items.length });
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1e66a70247104faa8357f98146864e12","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
